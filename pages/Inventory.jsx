@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Header } from '../components/Header';
 
+const API_URL = 'http://localhost:3001/api';
+
 const ProductModal = ({ product, onClose, onSave }) => {
     const [name, setName] = useState(product?.name || '');
     const [price, setPrice] = useState(product?.price || 0);
@@ -44,21 +46,41 @@ const ProductModal = ({ product, onClose, onSave }) => {
     );
 };
 
-export const Inventory = ({ setPage, products, setProducts }) => {
+export const Inventory = ({ setPage, products, onDataUpdate }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
 
-    const handleSaveProduct = (product) => {
-        if (selectedProduct) {
-            setProducts(products.map(p => p.id === product.id ? product : p));
-        } else {
-            setProducts([...products, product]);
+    const handleSaveProduct = async (product) => {
+        const url = selectedProduct 
+            ? `${API_URL}/products/${product.id}` 
+            : `${API_URL}/products`;
+        
+        const method = selectedProduct ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(product)
+            });
+            if (!response.ok) throw new Error('Failed to save product');
+            onDataUpdate(); // Refresh data in parent
+        } catch (error) {
+            console.error("Save failed:", error);
+            alert("Error saving product. Check the console for details.");
         }
     };
 
-    const handleDeleteProduct = (id) => {
+    const handleDeleteProduct = async (id) => {
         if (window.confirm('Are you sure you want to delete this product?')) {
-            setProducts(products.filter(p => p.id !== id));
+            try {
+                const response = await fetch(`${API_URL}/products/${id}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Failed to delete product');
+                onDataUpdate(); // Refresh data in parent
+            } catch(error) {
+                console.error("Delete failed:", error);
+                alert("Error deleting product. Check the console for details.");
+            }
         }
     };
 
@@ -91,7 +113,7 @@ export const Inventory = ({ setPage, products, setProducts }) => {
                         {products.map(product => (
                             <tr key={product.id} className="border-t border-slate-700 hover:bg-slate-700/30">
                                 <td className="p-4">{product.name}</td>
-                                <td className="p-4">${product.price.toFixed(2)}</td>
+                                <td className="p-4">₹{product.price.toFixed(2)}</td>
                                 <td className="p-4">{product.stock}</td>
                                 <td className="p-4 flex gap-2">
                                     <button onClick={() => openModal(product)} className="px-3 py-1 text-sm bg-yellow-600 rounded hover:bg-yellow-500">Edit</button>

@@ -32,7 +32,7 @@ export const Sales = ({ setPage, sales }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
           <h3 className="text-slate-400 mb-2">Total Revenue</h3>
-          <p className="text-4xl font-bold">${totalRevenue.toFixed(2)}</p>
+          <p className="text-4xl font-bold">₹{totalRevenue.toFixed(2)}</p>
         </div>
         <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
           <h3 className="text-slate-400 mb-2">Total Sales</h3>
@@ -54,6 +54,7 @@ export const Sales = ({ setPage, sales }) => {
               <Tooltip
                 contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
                 labelStyle={{ color: '#cbd5e1' }}
+                formatter={(value) => `₹${value.toFixed(2)}`}
               />
               <Legend wrapperStyle={{ color: '#cbd5e1' }} />
               <Bar dataKey="Revenue" fill="#2563eb" />

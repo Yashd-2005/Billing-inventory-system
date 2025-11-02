@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import { Header } from '../components/Header';
 import { useReactToPrint } from 'react-to-print';
 
+const API_URL = 'http://localhost:3001/api';
+
 const BillPrintComponent = React.forwardRef(({ items, total }, ref) => (
     <div ref={ref} className="p-8 text-black bg-white">
         <h1 className="text-3xl font-bold mb-6 text-center">Invoice</h1>
@@ -19,25 +21,26 @@ const BillPrintComponent = React.forwardRef(({ items, total }, ref) => (
                     <tr key={item.id} className="border-b">
                         <td className="p-2">{item.name}</td>
                         <td className="text-center p-2">{item.quantity}</td>
-                        <td className="text-right p-2">${item.price.toFixed(2)}</td>
-                        <td className="text-right p-2">${(item.price * item.quantity).toFixed(2)}</td>
+                        <td className="text-right p-2">₹{item.price.toFixed(2)}</td>
+                        <td className="text-right p-2">₹{(item.price * item.quantity).toFixed(2)}</td>
                     </tr>
                 ))}
             </tbody>
         </table>
         <div className="text-right mt-6">
-            <p className="text-2xl font-bold">Total: ${total.toFixed(2)}</p>
+            <p className="text-2xl font-bold">Total: ₹{total.toFixed(2)}</p>
         </div>
     </div>
 ));
 
 
-export const Billing = ({ setPage, products, setProducts, addSale }) => {
+export const Billing = ({ setPage, products, onDataUpdate }) => {
   const [billItems, setBillItems] = useState([]);
   const componentToPrintRef = useRef(null);
 
   const handlePrint = useReactToPrint({
     content: () => componentToPrintRef.current,
+    onAfterPrint: () => setBillItems([]), // Clear bill after printing
   });
 
   const addToBill = (product) => {
@@ -79,36 +82,38 @@ export const Billing = ({ setPage, products, setProducts, addSale }) => {
 
   const total = billItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const finalizeBill = () => {
+  const finalizeBill = async () => {
     if (billItems.length === 0) {
         alert("Cannot generate an empty bill.");
         return;
     }
 
-    // 1. Update stock
-    const newProducts = products.map(p => {
-        const billedItem = billItems.find(item => item.id === p.id);
-        if (billedItem) {
-            return { ...p, stock: p.stock - billedItem.quantity };
-        }
-        return p;
-    });
-    setProducts(newProducts);
-
-    // 2. Create sale record
     const newSale = {
         id: new Date().toISOString(),
         date: new Date().toISOString(),
         items: billItems,
         total: total,
     };
-    addSale(newSale);
 
-    // 3. Print
-    handlePrint();
-    
-    // 4. Clear bill
-    setBillItems([]);
+    try {
+        const response = await fetch(`${API_URL}/sales`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newSale),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Failed to finalize bill.');
+
+        // Print bill
+        handlePrint();
+        
+        // Refresh data in parent
+        onDataUpdate();
+
+    } catch (error) {
+        console.error("Failed to finalize bill:", error);
+        alert(`Error: ${error.message}`);
+    }
   };
 
   return (
@@ -125,7 +130,7 @@ export const Billing = ({ setPage, products, setProducts, addSale }) => {
                   <p className="font-semibold">{product.name}</p>
                   <p className="text-sm text-slate-400">Stock: {product.stock}</p>
                 </div>
-                <p className="font-bold">${product.price.toFixed(2)}</p>
+                <p className="font-bold">₹{product.price.toFixed(2)}</p>
               </div>
             ))}
              {products.filter(p => p.stock > 0).length === 0 && (
@@ -142,12 +147,12 @@ export const Billing = ({ setPage, products, setProducts, addSale }) => {
               <div key={item.id} className="flex justify-between items-center mb-3 p-3 bg-slate-900/50 rounded-md">
                 <div className="flex-1">
                   <p className="font-semibold">{item.name}</p>
-                  <p className="text-sm text-slate-400">${item.price.toFixed(2)} each</p>
+                  <p className="text-sm text-slate-400">₹{item.price.toFixed(2)} each</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="number" value={item.quantity} onChange={e => updateQuantity(item.id, parseInt(e.target.value))} className="w-16 text-center bg-slate-700 border-slate-600 rounded-md text-white" />
                 </div>
-                <p className="w-24 text-right font-bold">${(item.price * item.quantity).toFixed(2)}</p>
+                <p className="w-24 text-right font-bold">₹{(item.price * item.quantity).toFixed(2)}</p>
               </div>
             ))}
             {billItems.length === 0 && (
@@ -159,7 +164,7 @@ export const Billing = ({ setPage, products, setProducts, addSale }) => {
           <div className="border-t border-slate-700 mt-4 pt-4">
             <div className="flex justify-between items-center text-3xl font-bold mb-4">
               <span>Total:</span>
-              <span>${total.toFixed(2)}</span>
+              <span>₹{total.toFixed(2)}</span>
             </div>
             <div className="flex gap-4">
               <button onClick={() => setBillItems([])} className="flex-1 py-3 bg-slate-600 rounded-lg hover:bg-slate-500 transition font-semibold">Clear Bill</button>

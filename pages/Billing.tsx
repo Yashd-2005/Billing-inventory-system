@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Product, BillItem, Sale } from '../types';
 import { Header } from '../components/Header';
@@ -45,9 +46,13 @@ export const Billing: React.FC<{
   const [billItems, setBillItems] = useState<BillItem[]>([]);
   const componentToPrintRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = useReactToPrint({
+  // FIX: Create options object separately to bypass strict object literal type checking.
+  // This resolves an issue with incorrect type definitions in some versions of react-to-print.
+  const printOptions = {
     content: () => componentToPrintRef.current,
-  });
+    onAfterPrint: () => setBillItems([]), // Clear bill after printing
+  };
+  const handlePrint = useReactToPrint(printOptions);
 
   const addToBill = (product: Product) => {
     if(product.stock <= 0) {
@@ -115,9 +120,6 @@ export const Billing: React.FC<{
 
     // 3. Print
     handlePrint();
-    
-    // 4. Clear bill
-    setBillItems([]);
   };
 
   return (
