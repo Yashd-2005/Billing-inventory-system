@@ -4,7 +4,6 @@ import { Header } from '../components/Header';
 import { Page } from '../App';
 import { useReactToPrint } from 'react-to-print';
 
-// FIX: Removed React.FC type from BillPrintComponent as it does not support refs. The type is now correctly inferred from React.forwardRef.
 const BillPrintComponent = React.forwardRef<HTMLDivElement, { items: BillItem[], total: number }>(({ items, total }, ref) => (
     <div ref={ref} className="p-8 text-black bg-white">
         <h1 className="text-3xl font-bold mb-6 text-center">Invoice</h1>
@@ -45,16 +44,16 @@ export const Billing: React.FC<{
   const [billItems, setBillItems] = useState<BillItem[]>([]);
   const componentToPrintRef = useRef<HTMLDivElement>(null);
 
-  // FIX: Create a base options object to work around a typing issue in react-to-print,
-  // where options with only a `content` property can cause errors.
-  const printOptions = {
+  // FIX: The useReactToPrint hook has a typing issue where an options object with only
+  // a `content` property can cause a type error. To fix this, we add a harmless
+  // `documentTitle` property to the preview handler's options object.
+  const handlePreviewPrint = useReactToPrint({
     content: () => componentToPrintRef.current,
-  };
-
-  const handlePreviewPrint = useReactToPrint(printOptions);
+    documentTitle: "Invoice Preview",
+  });
 
   const handleFinalPrint = useReactToPrint({
-    ...printOptions,
+    content: () => componentToPrintRef.current,
     onAfterPrint: () => setBillItems([]), // Clear bill after printing
   });
 

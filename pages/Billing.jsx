@@ -2,8 +2,6 @@ import React, { useState, useRef } from 'react';
 import { Header } from '../components/Header';
 import { useReactToPrint } from 'react-to-print';
 
-const API_URL = 'http://localhost:3001/api';
-
 const BillPrintComponent = React.forwardRef(({ items, total }, ref) => (
     <div ref={ref} className="p-8 text-black bg-white">
         <h1 className="text-3xl font-bold mb-6 text-center">Invoice</h1>
@@ -34,7 +32,7 @@ const BillPrintComponent = React.forwardRef(({ items, total }, ref) => (
 ));
 
 
-export const Billing = ({ setPage, products, onDataUpdate }) => {
+export const Billing = ({ setPage, products, setProducts, addSale }) => {
   const [billItems, setBillItems] = useState([]);
   const componentToPrintRef = useRef(null);
 
@@ -86,38 +84,33 @@ export const Billing = ({ setPage, products, onDataUpdate }) => {
 
   const total = billItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const finalizeBill = async () => {
+  const finalizeBill = () => {
     if (billItems.length === 0) {
         alert("Cannot generate an empty bill.");
         return;
     }
 
+    // 1. Update stock
+    const newProducts = products.map(p => {
+        const billedItem = billItems.find(item => item.id === p.id);
+        if (billedItem) {
+            return { ...p, stock: p.stock - billedItem.quantity };
+        }
+        return p;
+    });
+    setProducts(newProducts);
+
+    // 2. Create sale record
     const newSale = {
         id: new Date().toISOString(),
         date: new Date().toISOString(),
         items: billItems,
         total: total,
     };
+    addSale(newSale);
 
-    try {
-        const response = await fetch(`${API_URL}/sales`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newSale),
-        });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Failed to finalize bill.');
-
-        // Print bill
-        handleFinalPrint();
-        
-        // Refresh data in parent
-        onDataUpdate();
-
-    } catch (error) {
-        console.error("Failed to finalize bill:", error);
-        alert(`Error: ${error.message}`);
-    }
+    // 3. Print
+    handleFinalPrint();
   };
 
   return (

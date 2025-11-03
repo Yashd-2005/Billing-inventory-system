@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Header } from '../components/Header';
 
-const API_URL = 'http://localhost:3001/api';
-
 const ProductModal = ({ product, onClose, onSave }) => {
     const [name, setName] = useState(product?.name || '');
     const [price, setPrice] = useState(product?.price || 0);
@@ -46,41 +44,21 @@ const ProductModal = ({ product, onClose, onSave }) => {
     );
 };
 
-export const Inventory = ({ setPage, products, onDataUpdate }) => {
+export const Inventory = ({ setPage, products, setProducts }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
 
-    const handleSaveProduct = async (product) => {
-        const url = selectedProduct 
-            ? `${API_URL}/products/${product.id}` 
-            : `${API_URL}/products`;
-        
-        const method = selectedProduct ? 'PUT' : 'POST';
-
-        try {
-            const response = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(product)
-            });
-            if (!response.ok) throw new Error('Failed to save product');
-            onDataUpdate(); // Refresh data in parent
-        } catch (error) {
-            console.error("Save failed:", error);
-            alert("Error saving product. Check the console for details.");
+    const handleSaveProduct = (product) => {
+        if (selectedProduct) {
+            setProducts(products.map(p => p.id === product.id ? product : p));
+        } else {
+            setProducts([...products, product]);
         }
     };
 
-    const handleDeleteProduct = async (id) => {
+    const handleDeleteProduct = (id) => {
         if (window.confirm('Are you sure you want to delete this product?')) {
-            try {
-                const response = await fetch(`${API_URL}/products/${id}`, { method: 'DELETE' });
-                if (!response.ok) throw new Error('Failed to delete product');
-                onDataUpdate(); // Refresh data in parent
-            } catch(error) {
-                console.error("Delete failed:", error);
-                alert("Error deleting product. Check the console for details.");
-            }
+            setProducts(products.filter(p => p.id !== id));
         }
     };
 
