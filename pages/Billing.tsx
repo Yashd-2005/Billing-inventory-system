@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Product, BillItem, Sale } from '../types';
 import { Header } from '../components/Header';
@@ -46,13 +45,18 @@ export const Billing: React.FC<{
   const [billItems, setBillItems] = useState<BillItem[]>([]);
   const componentToPrintRef = useRef<HTMLDivElement>(null);
 
-  // FIX: Create options object separately to bypass strict object literal type checking.
-  // This resolves an issue with incorrect type definitions in some versions of react-to-print.
+  // FIX: Create a base options object to work around a typing issue in react-to-print,
+  // where options with only a `content` property can cause errors.
   const printOptions = {
     content: () => componentToPrintRef.current,
-    onAfterPrint: () => setBillItems([]), // Clear bill after printing
   };
-  const handlePrint = useReactToPrint(printOptions);
+
+  const handlePreviewPrint = useReactToPrint(printOptions);
+
+  const handleFinalPrint = useReactToPrint({
+    ...printOptions,
+    onAfterPrint: () => setBillItems([]), // Clear bill after printing
+  });
 
   const addToBill = (product: Product) => {
     if(product.stock <= 0) {
@@ -119,7 +123,7 @@ export const Billing: React.FC<{
     addSale(newSale);
 
     // 3. Print
-    handlePrint();
+    handleFinalPrint();
   };
 
   return (
@@ -174,6 +178,7 @@ export const Billing: React.FC<{
             </div>
             <div className="flex gap-4">
               <button onClick={() => setBillItems([])} className="flex-1 py-3 bg-slate-600 rounded-lg hover:bg-slate-500 transition font-semibold">Clear Bill</button>
+              <button onClick={handlePreviewPrint} className="flex-1 py-3 bg-blue-600 rounded-lg hover:bg-blue-500 transition font-semibold">Print Preview</button>
               <button onClick={finalizeBill} className="flex-1 py-3 bg-green-600 rounded-lg hover:bg-green-500 transition font-semibold">Generate & Print Bill</button>
             </div>
           </div>

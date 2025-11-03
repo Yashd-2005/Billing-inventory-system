@@ -38,9 +38,13 @@ export const Billing = ({ setPage, products, onDataUpdate }) => {
   const [billItems, setBillItems] = useState([]);
   const componentToPrintRef = useRef(null);
 
-  const handlePrint = useReactToPrint({
+  const handleFinalPrint = useReactToPrint({
     content: () => componentToPrintRef.current,
     onAfterPrint: () => setBillItems([]), // Clear bill after printing
+  });
+  
+  const handlePreviewPrint = useReactToPrint({
+    content: () => componentToPrintRef.current,
   });
 
   const addToBill = (product) => {
@@ -105,7 +109,7 @@ export const Billing = ({ setPage, products, onDataUpdate }) => {
         if (!response.ok) throw new Error(result.error || 'Failed to finalize bill.');
 
         // Print bill
-        handlePrint();
+        handleFinalPrint();
         
         // Refresh data in parent
         onDataUpdate();
@@ -168,6 +172,7 @@ export const Billing = ({ setPage, products, onDataUpdate }) => {
             </div>
             <div className="flex gap-4">
               <button onClick={() => setBillItems([])} className="flex-1 py-3 bg-slate-600 rounded-lg hover:bg-slate-500 transition font-semibold">Clear Bill</button>
+              <button onClick={handlePreviewPrint} className="flex-1 py-3 bg-blue-600 rounded-lg hover:bg-blue-500 transition font-semibold">Print Preview</button>
               <button onClick={finalizeBill} className="flex-1 py-3 bg-green-600 rounded-lg hover:bg-green-500 transition font-semibold">Generate & Print Bill</button>
             </div>
           </div>
